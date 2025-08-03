@@ -1,0 +1,1 @@
+The primary idea of this project is to create a high intensity game about knowing left and right. Potential features include multiplayer battles, intense animations, different game modes, and epic music.
