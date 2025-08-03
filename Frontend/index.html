@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>
+    Left Right Game
+  </title>
+</head>
+
+<body>
+
+
+
+
+
+  <style>
+
+  </style>
+  <script>
+    let debug_mode = true;
+    const valid_pairs = [
+      ["a", "d"],
+      ["h", "l"]
+    ];
+    var current_pair = null;
+    // implement mechanics - check if a player has entered a key and send it to a centralized proccessor.
+
+    let proccessor = function (event) {
+      //left right proccessor
+      if (current_pair == null) {
+        for (var pair of valid_pairs) {
+          if (event.key == pair[0]) {
+            document.dispatchEvent(new Event("left"));
+            current_pair = pair;
+            break;
+          } else if (event.key == pair[1]) {
+            document.dispatchEvent(new Event("right"));
+            current_pair = pair;
+            break;
+          } else {
+            continue;
+          }
+        }
+      } else {
+        if (event.key == current_pair[0]) {
+          document.dispatchEvent(new Event("left"));
+        } else if (event.key == current_pair[1]) {
+          document.dispatchEvent(new Event("right"));
+        } else {
+          log("not a valid key");
+        }
+      }
+
+    };
+
+    //Initates the event listeners
+    function initiate_listeners() {
+      document.addEventListener("keypress", proccessor);
+    }
+
+
+    initiate_listeners();
+
+    function log(event) {
+      if (debug_mode) {
+        console.log(event);
+      }
+    }
+    if (debug_mode) {
+      document.addEventListener("left", (event) => {log("left event")});
+      document.addEventListener("right", (event) => {log("right event")});
+    }
+  </script>
+</body>
+
+</html>
