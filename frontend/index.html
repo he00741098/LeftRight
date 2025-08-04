@@ -3,29 +3,69 @@
 
 <head>
   <title>
-    Left Right Game
+    Left Right Sweep!
   </title>
 </head>
 
 <body>
 
-
-
-
+  <div id="game">
+    <div id="prompt"></div>
+    <div id="indicator"></div>
+    <div id="buttons">
+      <div class="lrbutton" id="leftbutton"></div>
+      <div class="lrbutton" id="rightbutton"></div>
+    </div>
+  </div>
 
   <style>
+    html,
+    body,
+    #game {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
 
+    #game {
+      display: grid;
+      justify-content: center;
+    }
+
+    #indicator {
+      width: 50px;
+      height: 50px;
+    }
+
+    #prompt {
+      width: 300px;
+      height: 50px;
+      font-size: 50px;
+    }
+
+    .lrbutton {
+      width: 300px;
+      height: 50px;
+    }
+
+    #leftbutton {}
   </style>
   <script>
     let debug_mode = true;
     const valid_pairs = [
       ["a", "d"],
-      ["h", "l"]
+      ["h", "l"],
+      ["f", "j"]
     ];
+    const prompt = document.getElementById("prompt");
+    const indicator = document.getElementById("indicator");
+    var now;
     var current_pair = null;
     // implement mechanics - check if a player has entered a key and send it to a centralized proccessor.
-
+    //function that proccesses the keypress events
     let proccessor = function (event) {
+      // log(event.key);
       //left right proccessor
       if (current_pair == null) {
         for (var pair of valid_pairs) {
@@ -37,6 +77,10 @@
             document.dispatchEvent(new Event("right"));
             current_pair = pair;
             break;
+          } else if (event.key == " ") {
+            //space
+            document.dispatchEvent(new Event("sweep"));
+            continue;
           } else {
             continue;
           }
@@ -46,30 +90,170 @@
           document.dispatchEvent(new Event("left"));
         } else if (event.key == current_pair[1]) {
           document.dispatchEvent(new Event("right"));
+        } else if (event.key == " ") {
+          document.dispatchEvent(new Event("sweep"));
         } else {
           log("not a valid key");
         }
       }
 
     };
-
     //Initates the event listeners
     function initiate_listeners() {
       document.addEventListener("keypress", proccessor);
     }
-
-
-    initiate_listeners();
-
+    //function that replaces console.log--only logs when in debug mode
     function log(event) {
       if (debug_mode) {
         console.log(event);
       }
     }
     if (debug_mode) {
-      document.addEventListener("left", (event) => {log("left event")});
-      document.addEventListener("right", (event) => {log("right event")});
+      // document.addEventListener("left", (event) => {log("left event")});
+      // document.addEventListener("right", (event) => {log("right event")});
     }
+
+    initiate_listeners();
+    //proceed with game initialization.
+    var current_direction = -1;
+    var left_func = function () {
+      time_elapsed();
+      if (current_direction == 0) {
+        // log("Correct Left");
+        trigger_correct();
+      } else {
+        // log("Incorrect Left");
+        trigger_incorrect();
+      }
+      change_direction();
+    };
+    var right_func = function () {
+      time_elapsed();
+      if (current_direction == 1) {
+        // log("Correct Right");
+        trigger_correct();
+      } else {
+        // log("Incorrect Right");
+        trigger_incorrect();
+      }
+      change_direction();
+    };
+    var sweep_func = function () {
+      time_elapsed();
+      if (current_direction == 2) {
+        // log("Correct Sweep");
+        trigger_correct();
+      } else {
+        // log("Incorrect Sweep");
+        trigger_incorrect();
+      }
+      change_direction();
+    };
+    function time_elapsed() {
+      let new_new = performance.now();
+      log("Time elapsed: " + (new_new - now) + " ms");
+      now = new_new;
+    }
+
+    function trigger_correct() {
+      indicator.style.backgroundColor = "green";
+    }
+    function trigger_incorrect() {
+      indicator.style.backgroundColor = "red";
+
+    }
+    function initiate_game() {
+      now = performance.now();
+      document.addEventListener("left", (event) => {left_func()});
+      document.addEventListener("right", (event) => {right_func()});
+      document.addEventListener("sweep", (event) => {sweep_func()});
+      change_direction();
+    }
+    function change_direction() {
+
+      if (current_direction == -1) {
+        let random = Math.floor(Math.random() * 3);
+        if (random == 0) {
+          //left
+          current_direction = 0;
+          prompt.innerText = "Left";
+        } else if (random == 1) {
+          //right
+          current_direction = 1;
+          prompt.innerText = "Right";
+        } else if (random == 2) {
+          current_direction = 2;
+          prompt.innerText = "Sweep!";
+        } else {
+          log("something went massively wrong!!!!")
+          alert("Undefined behavior");
+          return;
+        }
+      } else {
+        let random = Math.floor(Math.random() * 2);
+        switch (current_direction) {
+          case 0:
+            switch (random) {
+              case 0:
+                current_direction = 1;
+                prompt.innerText = "Right";
+                break;
+              case 1:
+                current_direction = 2;
+                prompt.innerText = "Sweep!";
+                break;
+            }
+            break;
+          case 1:
+            switch (random) {
+              case 0:
+                current_direction = 0;
+                prompt.innerText = "Left";
+                break;
+              case 1:
+                current_direction = 2;
+                prompt.innerText = "Sweep!";
+                break;
+            }
+            break;
+          case 2:
+            switch (random) {
+              case 0:
+                current_direction = 0;
+                prompt.innerText = "Left";
+                break;
+              case 1:
+                current_direction = 1;
+                prompt.innerText = "Right";
+                break;
+            }
+            break;
+        }
+        // if (current_direction == 0) {
+        //   if (random == 0) {
+        //     current_direction = 1;
+        //   } else {
+        //     current_direction = 2;
+        //   }
+        // } else if (current_direction == 1) {
+        //   if (random == 0) {
+        //     current_direction = 0;
+        //   } else {
+        //     current_direction = 2;
+        //   }
+        // } else if (current_direction == 2) {
+        //   if (random == 0) {
+        //     current_direction = 0;
+        //   } else {
+        //     current_direction = 1;
+        //   }
+        // }
+      }
+    }
+
+
+
+    initiate_game();
   </script>
 </body>
 
