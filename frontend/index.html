@@ -16,6 +16,12 @@
       <div class="lrbutton" id="leftbutton"></div>
       <div class="lrbutton" id="rightbutton"></div>
     </div>
+
+    <div class="canvascontainer" id="canvasdiv">
+      <canvas id="maingame">
+
+      </canvas>
+    </div>
   </div>
 
   <style>
@@ -27,6 +33,18 @@
       margin: 0;
       padding: 0;
     }
+
+    .canvascontainer {
+      width: 80%;
+      height: 80%;
+      position: absolute;
+      left: 10%;
+      top: 10%;
+      margin: 0;
+      padding: 0;
+    }
+
+    #maingame {}
 
     #game {
       display: grid;
@@ -58,10 +76,24 @@
       ["h", "l"],
       ["f", "j"]
     ];
+    const valid_left_prompts = ["L", "l", "left", "Left", "<", "<="];
+    const valid_right_prompts = ["R", "r", "right", "Right", ">", "=>"];
+    const valid_sweep_prompts = ["Sweep!"];
+
     const prompt = document.getElementById("prompt");
     const indicator = document.getElementById("indicator");
+    const canvas = document.getElementById("maingame");
     var now;
     var current_pair = null;
+    var current_direction = -1;
+    var directions = [-1, -1, -1, -1, -1, -1, -1, -1];
+    var current_direction_index = 0;
+
+    function canvas_resize() {
+      let rect = document.getElementById("canvasdiv").getBoundingClientRect();
+      canvas.height = rect.height;
+      canvas.width = rect.width;
+    }
     // implement mechanics - check if a player has entered a key and send it to a centralized proccessor.
     //function that proccesses the keypress events
     let proccessor = function (event) {
@@ -101,6 +133,7 @@
     //Initates the event listeners
     function initiate_listeners() {
       document.addEventListener("keypress", proccessor);
+      window.addEventListener("resize", canvas_resize);
     }
     //function that replaces console.log--only logs when in debug mode
     function log(event) {
@@ -108,14 +141,7 @@
         console.log(event);
       }
     }
-    if (debug_mode) {
-      // document.addEventListener("left", (event) => {log("left event")});
-      // document.addEventListener("right", (event) => {log("right event")});
-    }
-
-    initiate_listeners();
     //proceed with game initialization.
-    var current_direction = -1;
     var left_func = function () {
       time_elapsed();
       if (current_direction == 0) {
@@ -167,6 +193,7 @@
       document.addEventListener("left", (event) => {left_func()});
       document.addEventListener("right", (event) => {right_func()});
       document.addEventListener("sweep", (event) => {sweep_func()});
+      generate_direction_set();
       change_direction();
     }
     function change_direction() {
@@ -175,15 +202,12 @@
         let random = Math.floor(Math.random() * 3);
         if (random == 0) {
           //left
-          current_direction = 0;
-          prompt.innerText = "Left";
+          display_left();
         } else if (random == 1) {
           //right
-          current_direction = 1;
-          prompt.innerText = "Right";
+          display_right();
         } else if (random == 2) {
-          current_direction = 2;
-          prompt.innerText = "Sweep!";
+          display_sweep();
         } else {
           log("something went massively wrong!!!!")
           alert("Undefined behavior");
@@ -191,68 +215,80 @@
         }
       } else {
         let random = Math.floor(Math.random() * 2);
+        //large switch statement to prevent duplicate rights...
         switch (current_direction) {
           case 0:
             switch (random) {
               case 0:
-                current_direction = 1;
-                prompt.innerText = "Right";
+                display_right();
                 break;
               case 1:
-                current_direction = 2;
-                prompt.innerText = "Sweep!";
+                display_sweep();
                 break;
             }
             break;
           case 1:
             switch (random) {
               case 0:
-                current_direction = 0;
-                prompt.innerText = "Left";
+                display_left();
                 break;
               case 1:
-                current_direction = 2;
-                prompt.innerText = "Sweep!";
+                display_sweep();
                 break;
             }
             break;
           case 2:
             switch (random) {
               case 0:
-                current_direction = 0;
-                prompt.innerText = "Left";
+                display_left();
                 break;
               case 1:
-                current_direction = 1;
-                prompt.innerText = "Right";
+                display_right();
                 break;
             }
             break;
         }
-        // if (current_direction == 0) {
-        //   if (random == 0) {
-        //     current_direction = 1;
-        //   } else {
-        //     current_direction = 2;
-        //   }
-        // } else if (current_direction == 1) {
-        //   if (random == 0) {
-        //     current_direction = 0;
-        //   } else {
-        //     current_direction = 2;
-        //   }
-        // } else if (current_direction == 2) {
-        //   if (random == 0) {
-        //     current_direction = 0;
-        //   } else {
-        //     current_direction = 1;
-        //   }
-        // }
+      }
+    }
+    function display_left() {
+      current_direction = 0;
+      prompt.innerText = "Left";
+    }
+    function display_right() {
+      current_direction = 1;
+      prompt.innerText = "Right";
+    }
+    function display_sweep() {
+      current_direction = 2;
+      prompt.innerText = "Sweep!";
+    }
+
+    function generate_direction_set() {
+      for (var i = 0; i < directions.length; i++) {
+        let random = Math.floor(Math.random() * 3);
+        directions[i] = random;
+      }
+    }
+    function regenerate_direction_set(second_half) {
+      if (!second_half) {
+        for (var i = 0; i < directions.length / 2; i++) {
+          let random = Math.floor(Math.random() * 3);
+          directions[i] = random;
+        }
+      } else {
+        for (var i = 4; i < directions.length; i++) {
+          let random = Math.floor(Math.random() * 3);
+          directions[i] = random;
+        }
       }
     }
 
-
-
+    if (debug_mode) {
+      // document.addEventListener("left", (event) => {log("left event")});
+      // document.addEventListener("right", (event) => {log("right event")});
+    }
+    initiate_listeners();
+    canvas_resize();
     initiate_game();
   </script>
 </body>
