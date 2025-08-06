@@ -83,11 +83,21 @@
     const prompt = document.getElementById("prompt");
     const indicator = document.getElementById("indicator");
     const canvas = document.getElementById("maingame");
+    var ctx = canvas.getContext("2d");
+    var animation_acceleration = 0.05;
+    var animation_velocity = 0.1;
+    var animation_loop;
     var now;
     var current_pair = null;
     var current_direction = -1;
+    //an array used to save the left/right/sweep order to be sent; static size so each array index will eventually be reassigned and reused.
     var directions = [-1, -1, -1, -1, -1, -1, -1, -1];
+    //an array of positions of the squares so that the animations will work hopefully;
+    var positions = [-1, -1, -1, -1, -1, -1, -1, -1];
+    var target_positions = [-1, -1, -1, -1, -1, -1, -1, -1];
+    //an index that tracks the current array index to be used
     var current_direction_index = 0;
+    var shift_help_index = 0;
 
     function canvas_resize() {
       let rect = document.getElementById("canvasdiv").getBoundingClientRect();
@@ -132,7 +142,7 @@
     };
     //Initates the event listeners
     function initiate_listeners() {
-      document.addEventListener("keypress", proccessor);
+      document.addEventListener("keydown", proccessor);
       window.addEventListener("resize", canvas_resize);
     }
     //function that replaces console.log--only logs when in debug mode
@@ -183,10 +193,11 @@
 
     function trigger_correct() {
       indicator.style.backgroundColor = "green";
+      shift_boxes();
     }
     function trigger_incorrect() {
       indicator.style.backgroundColor = "red";
-
+      shift_boxes();
     }
     function initiate_game() {
       now = performance.now();
@@ -194,60 +205,31 @@
       document.addEventListener("right", (event) => {right_func()});
       document.addEventListener("sweep", (event) => {sweep_func()});
       generate_direction_set();
-      change_direction();
+      current_direction = directions[0];
+      display_switch(current_direction);
     }
     function change_direction() {
-
-      if (current_direction == -1) {
-        let random = Math.floor(Math.random() * 3);
-        if (random == 0) {
-          //left
+      current_direction_index++;
+      if (current_direction_index > 7) {
+        regenerate_direction_set(true);
+        current_direction_index = 0;
+      } else if (current_direction_index == 4) {
+        regenerate_direction_set(false);
+      }
+      current_direction = directions[current_direction_index];
+      display_switch(current_direction);
+    }
+    function display_switch(current_direction) {
+      switch (current_direction) {
+        case 0:
           display_left();
-        } else if (random == 1) {
-          //right
+          break;
+        case 1:
           display_right();
-        } else if (random == 2) {
+          break;
+        case 2:
           display_sweep();
-        } else {
-          log("something went massively wrong!!!!")
-          alert("Undefined behavior");
-          return;
-        }
-      } else {
-        let random = Math.floor(Math.random() * 2);
-        //large switch statement to prevent duplicate rights...
-        switch (current_direction) {
-          case 0:
-            switch (random) {
-              case 0:
-                display_right();
-                break;
-              case 1:
-                display_sweep();
-                break;
-            }
-            break;
-          case 1:
-            switch (random) {
-              case 0:
-                display_left();
-                break;
-              case 1:
-                display_sweep();
-                break;
-            }
-            break;
-          case 2:
-            switch (random) {
-              case 0:
-                display_left();
-                break;
-              case 1:
-                display_right();
-                break;
-            }
-            break;
-        }
+          break;
       }
     }
     function display_left() {
@@ -287,8 +269,87 @@
       // document.addEventListener("left", (event) => {log("left event")});
       // document.addEventListener("right", (event) => {log("right event")});
     }
+
+
+    function draw_rectangle(x, y, direction) {
+      ctx.strokeRect(x, y, Math.floor(canvas.width / 15), Math.floor(canvas.width / 15));
+      ctx.font = "20px serif";
+      switch (direction) {
+        case 0:
+          ctx.fillText("Left", Math.floor(x + canvas.width / 30) - 15, Math.floor(y + canvas.width / 30) + 6);
+          break;
+        case 1:
+          ctx.fillText("Right", Math.floor(x + canvas.width / 30) - 20, Math.floor(y + canvas.width / 30) + 6);
+          break;
+        case 2:
+          ctx.fillText("Sweep!", Math.floor(x + canvas.width / 30) - 28, Math.floor(y + canvas.width / 30) + 6);
+          break;
+      }
+    }
+    function clear() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    //animation targets -> target a position and move toward it
+    //acceleration when player goes faster
+    function animate() {
+      //TODO: perbox animation velocity
+      if (!in_position()) {
+        clear();
+        for (var i = 0; i < positions.length; i++) {
+          if (positions[i] + animation_velocity > target_positions[i]) {
+            positions[i] = target_positions[i];
+          } else if (positions[i] + animation_velocity <= target_positions[i]) {
+            positions[i] += animation_velocity;
+          }
+        }
+        for (var i = 0; i < positions.length; i++) {
+          draw_rectangle((canvas.width / 2) - (canvas.width / 30), positions[i], directions[i]);
+        }
+        animation_velocity += animation_acceleration;
+      } else {
+        animation_velocity = 0.1;
+      }
+    }
+    function in_position() {
+      for (var i = 0; i < positions.length; i++) {
+        if (positions[i] != target_positions[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+    function stop_animation_loop() {
+      if (debug_mode) {
+        clearInterval(animation_loop);
+        return true;
+      }
+    }
+    function shift_boxes() {
+      log(shift_help_index);
+      //shift box to top
+      target_positions[shift_help_index] = Math.floor(canvas.height * 2 / 3) - 8 * Math.floor(canvas.width / 13);
+      positions[shift_help_index] = -9 * Math.floor(canvas.width / 13);
+      //TODO: prevent the boxes from overlapping
+      for (var i = 0; i < positions.length; i++) {
+        target_positions[i] = target_positions[i] + Math.floor(canvas.width / 13);
+      }
+      if (shift_help_index < 7) {
+        shift_help_index += 1;
+      } else {
+        shift_help_index = 0;
+      }
+    }
+
     initiate_listeners();
     canvas_resize();
+    for (var i = 0; i < positions.length; i++) {
+      positions[i] = i * Math.floor(-canvas.width / 13) - Math.floor(canvas.width / 13);
+    }
+    for (var i = 0; i < positions.length; i++) {
+      // target_positions[i] = 500 - i * 100;
+      target_positions[i] = Math.floor(canvas.height * 2 / 3) - i * Math.floor(canvas.width / 13);
+    }
+    animation_loop = setInterval(animate, 1000 / 60);
     initiate_game();
   </script>
 </body>
