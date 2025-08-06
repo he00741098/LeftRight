@@ -95,9 +95,27 @@
     //an array of positions of the squares so that the animations will work hopefully;
     var positions = [-1, -1, -1, -1, -1, -1, -1, -1];
     var target_positions = [-1, -1, -1, -1, -1, -1, -1, -1];
+    var relative_positions = [0, 0, 0, 0, 0, 0, 0, 0];
     //an index that tracks the current array index to be used
     var current_direction_index = 0;
     var shift_help_index = 0;
+    //gives the relative order of the box given the index provided
+    function relative_box_order(i) {
+      // if shift_help_index = 0, 0 is 0
+      //if shift_help_index = 1, 0 is 7, 1 is 0
+      //if shift_help_index = 2, 0 is 6, 1 is 7, 2 is 0;
+      let shift = i - shift_help_index;
+      if (shift < 0) {
+        return 8 + shift;
+      } else {
+        return shift;
+      }
+    }
+    function sort_relative_positions{
+      for (var i = 0; i < positions.length; i++) {
+        relative_positions[relative_box_order(i)] = i;
+      }
+    }
 
     function canvas_resize() {
       let rect = document.getElementById("canvasdiv").getBoundingClientRect();
@@ -297,17 +315,17 @@
     //acceleration when player goes faster
     function animate() {
       // log("animating");
-      // TODO: perbox animation velocity
       if (in_position()) {
         return;
       }
       clear();
+      sort_relative_positions();
       for (var i = 0; i < positions.length; i++) {
         if (positions[i] != target_positions[i]) {
           if (positions[i] + animation_velocity[i] > target_positions[i]) {
             positions[i] = target_positions[i];
           } else if (positions[i] + animation_velocity[i] <= target_positions[i]) {
-            positions[i] += animation_velocity[i];
+            positions[i] += animation_velocity[i] * (7 - (relative_box_order(i)));
           }
           // draw_rectangle((canvas.width / 2) - (canvas.width / 30), positions[i], directions[i]);
           animation_velocity[i] += animation_acceleration;
