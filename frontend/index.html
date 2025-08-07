@@ -84,12 +84,14 @@
     const indicator = document.getElementById("indicator");
     const canvas = document.getElementById("maingame");
     var ctx = canvas.getContext("2d");
+    var velocity_base = 0.1;
     var animation_acceleration = 0.05;
     var animation_velocity = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
     var animation_loop;
     var now;
     var current_pair = null;
     var current_direction = -1;
+    var last_time_elapsed = 300;
     //an array used to save the left/right/sweep order to be sent; static size so each array index will eventually be reassigned and reused.
     var directions = [-1, -1, -1, -1, -1, -1, -1, -1];
     //an array of positions of the squares so that the animations will work hopefully;
@@ -111,7 +113,7 @@
         return shift;
       }
     }
-    function sort_relative_positions{
+    function sort_relative_positions() {
       for (var i = 0; i < positions.length; i++) {
         relative_positions[relative_box_order(i)] = i;
       }
@@ -151,10 +153,10 @@
         } else if (event.key == current_pair[1]) {
           document.dispatchEvent(new Event("right"));
         } else if (event.key == " ") {
-          log("sweep dispatched");
+          // log("sweep dispatched");
           document.dispatchEvent(new Event("sweep"));
         } else {
-          log("not a valid key");
+          // log("not a valid key");
         }
       }
 
@@ -199,7 +201,7 @@
         // log("Correct Sweep");
         trigger_correct();
       } else {
-        log("Incorrect Sweep");
+        // log("Incorrect Sweep");
         trigger_incorrect();
       }
       change_direction();
@@ -207,6 +209,7 @@
     function time_elapsed() {
       let new_new = performance.now();
       log("Time elapsed: " + (new_new - now) + " ms");
+      last_time_elapsed = new_new - now;
       now = new_new;
     }
 
@@ -292,6 +295,7 @@
 
     function draw_rectangle(x, y, direction) {
       ctx.strokeRect(x, y, Math.floor(canvas.width / 15), Math.floor(canvas.width / 15));
+      ctx.fillStyle = "black";
       ctx.font = "20px serif";
       switch (direction) {
         case 0:
@@ -308,6 +312,10 @@
     function clear() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
+    function semi_clear() {
+      ctx.fillStyle = "rgb(255 255 255 / 70%)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     function clear_i(index) {
       ctx.clearRect((canvas.width / 2) - (canvas.width / 30) - 10, positions[index] - 10, Math.floor(canvas.width / 15) + 10, Math.floor(canvas.width / 15) + 10);
     }
@@ -316,24 +324,63 @@
     function animate() {
       // log("animating");
       if (in_position()) {
+        clear();
+        draw_all();
         return;
       }
-      clear();
+      semi_clear();
       sort_relative_positions();
-      for (var i = 0; i < positions.length; i++) {
+      if (last_time_elapsed < 300) {
+        // no more animation...
+        clear();
+        for (var i of relative_positions) {
+          positions[i] = target_positions[i];
+        }
+        draw_all();
+        return;
+        // velocity_base = 800;
+      }
+      else if (last_time_elapsed > 600) {
+        velocity_base = 0.1;
+      }
+      //TODO: prevent box overlap and collision
+      // Make sure that the difference in positions between adjacent boxes does not go below a certain number
+      let last_position = 10000;
+      for (var i of relative_positions) {
         if (positions[i] != target_positions[i]) {
-          if (positions[i] + animation_velocity[i] > target_positions[i]) {
+          if (positions[i] + animation_velocity[i] * (7 - (relative_box_order(i))) > last_position - Math.floor(canvas.width / 13)) {
+
+            if (last_position < 50) {
+              //off screen in initial position
+              log("triggering");
+              //do nothing
+              // positions[i] = -9 * Math.floor(canvas.width / 13);
+            } else {
+              //do nothing...
+              positions[i] = last_position - Math.floor(canvas.width / 13);
+            }
+
+          } else if (positions[i] + animation_velocity[i] * (7 - (relative_box_order(i))) > target_positions[i]) {
             positions[i] = target_positions[i];
-          } else if (positions[i] + animation_velocity[i] <= target_positions[i]) {
+          } else if (positions[i] + animation_velocity[i] * (7 - (relative_box_order(i))) <= target_positions[i]) {
             positions[i] += animation_velocity[i] * (7 - (relative_box_order(i)));
           }
           // draw_rectangle((canvas.width / 2) - (canvas.width / 30), positions[i], directions[i]);
           animation_velocity[i] += animation_acceleration;
         } else {
-          animation_velocity[i] = 0.1;
+          animation_velocity[i] = velocity_base;
+        }
+        if (positions[i] < -9 * Math.floor(canvas.width / 13)) {
+          last_position = -9 * Math.floor(canvas.width / 13);
+        } else {
+          last_position = positions[i];
         }
       }
-      for (var i = 0; i < positions.length; i++) {
+      draw_all();
+    }
+
+    function draw_all() {
+      for (var i of relative_positions.toReversed()) {
         draw_rectangle((canvas.width / 2) - (canvas.width / 30), positions[i], directions[i]);
       }
     }
@@ -353,10 +400,11 @@
     }
     function shift_boxes() {
       // clear();
-      log(shift_help_index);
+      // log(shift_help_index);
       //shift box to top
       target_positions[shift_help_index] = Math.floor(canvas.height * 2 / 3) - 8 * Math.floor(canvas.width / 13);
       positions[shift_help_index] = -9 * Math.floor(canvas.width / 13);
+      animation_velocity[shift_help_index] = 1;
       //TODO: prevent the boxes from overlapping
       for (var i = 0; i < positions.length; i++) {
         target_positions[i] = target_positions[i] + Math.floor(canvas.width / 13);
