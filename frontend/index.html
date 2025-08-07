@@ -87,6 +87,7 @@
     var velocity_base = 0.1;
     var animation_acceleration = 0.05;
     var animation_velocity = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1];
+    var animation_progress = [-1, -1, -1, -1, -1, -1, -1, -1];
     var animation_loop;
     var now;
     var current_pair = null;
@@ -179,37 +180,38 @@
       if (current_direction == 0) {
         // log("Correct Left");
         trigger_correct();
+        change_direction();
       } else {
         // log("Incorrect Left");
         trigger_incorrect();
       }
-      change_direction();
     };
     var right_func = function () {
       time_elapsed();
       if (current_direction == 1) {
         // log("Correct Right");
         trigger_correct();
+        change_direction();
       } else {
         // log("Incorrect Right");
         trigger_incorrect();
       }
-      change_direction();
     };
     var sweep_func = function () {
       time_elapsed();
       if (current_direction == 2) {
         // log("Correct Sweep");
         trigger_correct();
+        change_direction();
       } else {
         // log("Incorrect Sweep");
         trigger_incorrect();
       }
-      change_direction();
     };
     function time_elapsed() {
       let new_new = performance.now();
       log("Time elapsed: " + (new_new - now) + " ms");
+      log("Avg Time elapsed : " + average_time_elapsed() + " ms");
       last_time_elapsed[shift_help_index] = new_new - now;
       now = new_new;
     }
@@ -220,7 +222,8 @@
     }
     function trigger_incorrect() {
       indicator.style.backgroundColor = "red";
-      shift_boxes();
+      animation_progress[shift_help_index] = 0;
+      // shift_help_index
     }
     function initiate_game() {
       now = performance.now();
@@ -310,6 +313,46 @@
           break;
       }
     }
+    function draw_rectangle_shake(x, y, direction, ms, index) {
+      // log("animating!");
+      //note that with 60 fps, there is ~17 ms per frame
+      //animation_progress[index]
+      //ms/frame
+      //max movement = 10;
+      //progress goes from 0->1
+      //ms / ms / frame => frame
+      //frame / ms * ms = frame
+      // 60 frames per second. I want the animation to last _ ms. So I need to determine how to split progress into frames
+      //Knowing that 1 is 100%, then 100/ms = progress/ms
+      //Then progress / ms * ms / frame = progress / frame
+
+      let displacement = 10 * Math.sin(animation_progress[index] * Math.PI * 2);
+      if (animation_progress[index] < 0) {
+        animation_progress[index] = 0;
+        animation_progress[index] += (1 / ms) * (1000 / 60);
+      } else if (animation_progress[index] > 1) {
+        animation_progress[index] = -1;
+        displacement = 0;
+      } else {
+        animation_progress[index] += (1 / ms) * (1000 / 60);
+      }
+      // log(animation_progress);
+      ctx.fillStyle = "red";
+      ctx.strokeRect(x + displacement, y, Math.floor(canvas.width / 15), Math.floor(canvas.width / 15));
+      ctx.font = "20px serif";
+      switch (direction) {
+        case 0:
+          ctx.fillText("Left", Math.floor(x + canvas.width / 30) - 15 + displacement, Math.floor(y + canvas.width / 30) + 6);
+          break;
+        case 1:
+          ctx.fillText("Right", Math.floor(x + canvas.width / 30) - 20 + displacement, Math.floor(y + canvas.width / 30) + 6);
+          break;
+        case 2:
+          ctx.fillText("Sweep!", Math.floor(x + canvas.width / 30) - 28 + displacement, Math.floor(y + canvas.width / 30) + 6);
+          break;
+      }
+
+    }
     function clear() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
@@ -331,7 +374,8 @@
       }
       semi_clear();
       sort_relative_positions();
-      if (average_time_elapsed() < 300) {
+      if (average_time_elapsed() < 100) {
+        log("reached 250 avg");
         // no more animation...
         clear();
         for (var i of relative_positions) {
@@ -341,8 +385,16 @@
         return;
         // velocity_base = 800;
       } else if (average_time_elapsed() < 340) {
+        log("reached 270 ms avg");
         for (var i = 0; i < animation_velocity.length; i++) {
-          animation_velocity[i] = 50;
+          //100 ms is 100%, 340 ms is 0%
+          // 100 / 100 = 1 340 / 100 = 3.4
+          animation_velocity[i] = 10 * (1 / (average_time_elapsed() / 100)) + 1;
+        }
+      } else if (average_time_elapsed() < 340) {
+        log("reached 340 ms avg");
+        for (var i = 0; i < animation_velocity.length; i++) {
+          animation_velocity[i] = 3;
         }
       }
       else if (average_time_elapsed() > 600) {
@@ -357,7 +409,7 @@
 
             if (last_position < 50) {
               //off screen in initial position
-              log("triggering");
+              // log("triggering");
               //do nothing
               // positions[i] = -9 * Math.floor(canvas.width / 13);
             } else {
@@ -386,7 +438,12 @@
 
     function draw_all() {
       for (var i of relative_positions.toReversed()) {
-        draw_rectangle((canvas.width / 2) - (canvas.width / 30), positions[i], directions[i]);
+        if (animation_progress[i] < 0) {
+          draw_rectangle((canvas.width / 2) - (canvas.width / 30), positions[i], directions[i]);
+        } else {
+          draw_rectangle_shake((canvas.width / 2) - (canvas.width / 30), positions[i], directions[i], 500, i);
+        }
+
       }
     }
     function in_position() {
