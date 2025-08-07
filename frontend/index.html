@@ -91,7 +91,7 @@
     var now;
     var current_pair = null;
     var current_direction = -1;
-    var last_time_elapsed = 300;
+    var last_time_elapsed = [300, 300, 300, 300, 300, 300, 300, 300];
     //an array used to save the left/right/sweep order to be sent; static size so each array index will eventually be reassigned and reused.
     var directions = [-1, -1, -1, -1, -1, -1, -1, -1];
     //an array of positions of the squares so that the animations will work hopefully;
@@ -209,7 +209,7 @@
     function time_elapsed() {
       let new_new = performance.now();
       log("Time elapsed: " + (new_new - now) + " ms");
-      last_time_elapsed = new_new - now;
+      last_time_elapsed[shift_help_index] = new_new - now;
       now = new_new;
     }
 
@@ -330,7 +330,7 @@
       }
       semi_clear();
       sort_relative_positions();
-      if (last_time_elapsed < 300) {
+      if (last_time_elapsed.reduce((total, next) => total + next, 0) / last_time_elapsed.length < 300) {
         // no more animation...
         clear();
         for (var i of relative_positions) {
@@ -340,7 +340,7 @@
         return;
         // velocity_base = 800;
       }
-      else if (last_time_elapsed > 600) {
+      else if (last_time_elapsed.reduce((total, next) => total + next, 0) / last_time_elapsed.length > 600) {
         velocity_base = 0.1;
       }
       //TODO: prevent box overlap and collision
